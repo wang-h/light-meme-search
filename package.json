@@ -1,0 +1,23 @@
+{
+  "name": "light-meme-search",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "build-index": "tsx scripts/build-index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.0",
+    "@prisma/client": "^6.19.3",
+    "hono": "^4.7.0",
+    "prisma": "^6.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

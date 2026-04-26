@@ -1,0 +1,16 @@
+# light-meme-search 独立开发用
+# 生产部署由 deploy/ 统一 compose 管理
+
+services:
+  meme-search:
+    build: .
+    container_name: meme-search
+    restart: unless-stopped
+    ports:
+      - "3010:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - VOLCENGINE_ARK_API_KEY=${VOLCENGINE_ARK_API_KEY}
+      - VOLCENGINE_ARK_BASE_URL=${VOLCENGINE_ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
+      - MEME_EMBEDDING_MODEL=${MEME_EMBEDDING_MODEL:-doubao-embedding-vision-251215}

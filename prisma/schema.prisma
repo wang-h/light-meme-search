@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// @map("memes")
+model Meme {
+  id          Int      @id @default(autoincrement())
+  category    String   @db.VarChar(100)
+  categoryDir String   @map("category_dir") @db.VarChar(255)
+  filename    String   @db.VarChar(500)
+  tags        String[] @default([])
+  url         String   @db.Text
+
+  @@map("memes")
+}
