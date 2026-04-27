@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { publicMemeImageUrl } from '../lib/meme-image-url.js'
+import { loadEffectiveSettings, isVolcEmbeddingConfiguredAfterLoad } from '../lib/meme-settings.js'
 import { embedText } from '../services/embedding.js'
 import { vectorSearch, textSearch } from '../services/meme-store.js'
 
@@ -9,14 +11,55 @@ search.post('/', async (c) => {
   const { query, top_k = 3, mode = 'vector' } = body
   if (!query) return c.json({ error: 'query is required' }, 400)
 
-  if (mode === 'text') {
-    const results = await textSearch(query, top_k)
-    return c.json({ query, mode: 'text', results })
+  await loadEffectiveSettings()
+  const hasEmb = isVolcEmbeddingConfiguredAfterLoad()
+
+  if (mode === 'text' || (mode === 'vector' && !hasEmb)) {
+    const raw = await textSearch(query, top_k)
+    const results = raw.map((r) => {
+      const { category_dir, ...rest } = r
+      return {
+        ...rest,
+        url: publicMemeImageUrl({ url: r.url, categoryDir: category_dir, filename: r.filename }),
+      }
+    })
+    return c.json({
+      query,
+      mode: 'text',
+      results,
+      fallback: mode === 'vector' && !hasEmb ? 'vector_unconfigured' : undefined,
+    })
   }
 
-  const queryEmb = await embedText(query)
-  const results = await vectorSearch(queryEmb, top_k)
-  return c.json({ query, mode: 'vector', results })
+  try {
+    const queryEmb = await embedText(query)
+    const raw = await vectorSearch(queryEmb, top_k)
+    const results = raw.map((r) => {
+      const { category_dir, ...rest } = r
+      return {
+        ...rest,
+        url: publicMemeImageUrl({ url: r.url, categoryDir: category_dir, filename: r.filename }),
+      }
+    })
+    return c.json({ query, mode: 'vector', results })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    const raw = await textSearch(query, top_k)
+    const results = raw.map((r) => {
+      const { category_dir, ...rest } = r
+      return {
+        ...rest,
+        url: publicMemeImageUrl({ url: r.url, categoryDir: category_dir, filename: r.filename }),
+      }
+    })
+    return c.json({
+      query,
+      mode: 'text',
+      results,
+      fallback: 'embedding_failed',
+      warning: message,
+    })
+  }
 })
 
 export default search

@@ -11,6 +11,7 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=${DATABASE_URL}
+      - MEME_IMAGE_BASE_URL=${MEME_IMAGE_BASE_URL:-}
       - VOLCENGINE_ARK_API_KEY=${VOLCENGINE_ARK_API_KEY}
       - VOLCENGINE_ARK_BASE_URL=${VOLCENGINE_ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
       - MEME_EMBEDDING_MODEL=${MEME_EMBEDDING_MODEL:-doubao-embedding-vision-251215}

@@ -19,3 +19,19 @@ model Meme {
 
   @@map("memes")
 }
+
+/// 单行 id=1：站内保存的访问控制与火山向量，优先于 .env
+model MemeAppSettings {
+  id             Int     @id @default(1)
+  sitePassword   String? @map("site_password")
+  apiKey         String? @map("api_key")
+  sessionSecret  String? @map("session_secret")
+  /// 火山 Ark API Key（多模态 embedding），可与访问控制一样在管理界面中配置
+  arkApiKey      String? @map("ark_api_key")
+  /// 留空时回退到环境变量或默认北京 endpoint
+  arkBaseUrl     String? @map("ark_base_url")
+  /// 留空时回退到环境变量或默认模型名
+  embeddingModel String? @map("embedding_model")
+
+  @@map("meme_app_settings")
+}

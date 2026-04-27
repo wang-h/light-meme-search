@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 — MemeSearch</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 15px/1.6 system-ui, -apple-system, sans-serif;
+    background: #fafafa;
+    color: #0a0a0a;
+  }
+  .card {
+    width: 100%;
+    max-width: 360px;
+    padding: 28px 24px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .logo-row svg {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .logo-row h1 { margin-bottom: 0; }
+  h1 { font-size: 18px; font-weight: 600; }
+  p { font-size: 12px; color: #525252; margin-bottom: 18px; }
+  label { display: block; font-size: 12px; color: #737373; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  input:focus { outline: none; border-color: #737373; }
+  button {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    background: #0a0a0a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .err { font-size: 12px; color: #b91c1c; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="10" cy="10" r="6.5"/><line x1="15" y1="15" x2="21" y2="21" stroke-linecap="round"/>
+        <circle cx="8" cy="9" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="9" r=".8" fill="currentColor" stroke="none"/>
+        <path d="M7.5 12.5 Q10 15 12.5 12.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <h1>MemeSearch</h1>
+    </div>
+    <p>请输入与服务器配置一致的访问密码（数据库中保存的站点密码优先，否则为 <code>MEME_SITE_PASSWORD</code>）</p>
+    <form id="f">
+      <label for="pw">密码</label>
+      <input id="pw" name="password" type="password" autocomplete="current-password" required />
+      <button type="submit" id="btn">进入</button>
+    </form>
+    <p class="err" id="err" style="display:none"></p>
+  </div>
+  <script>
+  const f = document.getElementById('f');
+  const err = document.getElementById('err');
+  const btn = document.getElementById('btn');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.style.display = 'none';
+    btn.disabled = true;
+    const password = document.getElementById('pw').value;
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        err.textContent = d.error === 'login_disabled' ? '服务端未配置登录' : (d.error === 'invalid_password' ? '密码错误' : '登录失败');
+        err.style.display = 'block';
+        btn.disabled = false;
+        return;
+      }
+      window.location.replace('/');
+    } catch (x) {
+      err.textContent = '网络错误';
+      err.style.display = 'block';
+      btn.disabled = false;
+    }
+  });
+  </script>
+</body>
+</html>

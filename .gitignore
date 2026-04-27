@@ -4,3 +4,6 @@ data/*.json
 .env
 
 /src/generated/prisma
+
+# 前端 esbuild 产物（本地或 CI 执行 npm run build:client 生成）
+public/assets/

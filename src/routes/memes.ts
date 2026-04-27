@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { publicMemeImageUrl } from '../lib/meme-image-url.js'
 import { listMemes, getMemeById, listCategories, countMemes } from '../services/meme-store.js'
 
 const memes = new Hono()
@@ -13,7 +14,8 @@ memes.get('/', async (c) => {
     listMemes(page, limit, category),
   ])
 
-  return c.json({ total, page, limit, items })
+  const withPublicUrl = items.map((m) => ({ ...m, url: publicMemeImageUrl(m) }))
+  return c.json({ total, page, limit, items: withPublicUrl })
 })
 
 memes.get('/categories', async (c) => {
@@ -25,7 +27,7 @@ memes.get('/:id', async (c) => {
   const id = Number(c.req.param('id'))
   const entry = await getMemeById(id)
   if (!entry) return c.json({ error: 'Not found' }, 404)
-  return c.json(entry)
+  return c.json({ ...entry, url: publicMemeImageUrl(entry) })
 })
 
 export default memes

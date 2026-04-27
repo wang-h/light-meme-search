@@ -52,10 +52,20 @@ export async function countMemesWithEmbedding(): Promise<number> {
 export async function vectorSearch(
   queryEmbedding: number[],
   topK: number
-): Promise<Array<{ id: number; score: number; category: string; tags: string[]; url: string; filename: string }>> {
+): Promise<
+    Array<{
+      id: number
+      score: number
+      category: string
+      tags: string[]
+      url: string
+      filename: string
+      category_dir: string
+    }>
+  > {
   const vecStr = `[${queryEmbedding.join(',')}]`
   return prisma.$queryRawUnsafe(
-    `SELECT id, 1 - (embedding <=> $1::vector) as score, category, tags, url, filename
+    `SELECT id, 1 - (embedding <=> $1::vector) as score, category, tags, url, filename, category_dir
      FROM "memes"
      WHERE embedding IS NOT NULL
      ORDER BY embedding <=> $1::vector
@@ -68,9 +78,18 @@ export async function vectorSearch(
 export async function textSearch(
   query: string,
   limit: number
-): Promise<Array<{ id: number; category: string; tags: string[]; url: string; filename: string }>> {
+): Promise<
+    Array<{
+      id: number
+      category: string
+      tags: string[]
+      url: string
+      filename: string
+      category_dir: string
+    }>
+  > {
   return prisma.$queryRawUnsafe(
-    `SELECT id, category, tags, url, filename
+    `SELECT id, category, tags, url, filename, category_dir
      FROM "memes"
      WHERE tags &@ $1
      LIMIT $2`,

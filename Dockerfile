@@ -2,14 +2,18 @@ FROM oven/bun:1 AS base
 WORKDIR /app
 
 COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile
+# 若无 bun.lock，去掉 --frozen-lockfile
+RUN bun install
 
 COPY prisma ./prisma
 RUN bunx prisma generate
 
 COPY tsconfig.json ./
 COPY src/ ./src/
+COPY scripts ./scripts
+COPY client/ ./client/
 COPY public/ ./public/
+RUN bun run build:client
 
 EXPOSE 3000
 
