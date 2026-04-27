@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>登录 — MemeSearch</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.loli.net" />
+<link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+<link
+  href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
 <style>
   * { margin: 0; box-sizing: border-box; }
   body {
@@ -12,7 +18,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font: 15px/1.6 system-ui, -apple-system, sans-serif;
+    font: 15px/1.65 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: #fafafa;
     color: #0a0a0a;
   }
@@ -63,6 +69,10 @@
   }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
   .err { font-size: 12px; color: #b91c1c; margin-top: 10px; }
+  code {
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.92em;
+  }
 </style>
 </head>
 <body>

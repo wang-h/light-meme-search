@@ -7,7 +7,22 @@ const SEARCH_TOPK = 24
 
 type CatRow = { name: string; count: number | null; isAll: boolean }
 
-type ErrorState = { title: string; detail: string; showConfigHint: boolean } | null
+type ConfigHintKind = 'api_key' | 'vector' | 'login'
+
+type ErrorState = {
+  title: string
+  detail: string
+  showConfigHint: boolean
+  hintKind?: ConfigHintKind
+} | null
+
+/** 从服务端 message 推断：未命中鉴权关键词时用 defaultKind（列表/分类用 api_key，搜索失败常用 vector）。 */
+function configHintFromDetail(detail: string, defaultKind: ConfigHintKind = 'api_key'): ConfigHintKind {
+  if (detail.includes('需要登录')) return 'login'
+  if (detail.includes('X-API-Key') || detail.includes('缺少或错误')) return 'api_key'
+  if (detail.includes('API Key') && (detail.includes('请检查') || detail.includes('一致'))) return 'api_key'
+  return defaultKind
+}
 
 function IconSearch() {
   return (
@@ -61,6 +76,11 @@ export function App() {
 
   const loadMemesRef = useRef<(page?: number, category?: string) => Promise<void>>(async () => {})
   const searchMemesRef = useRef<(q: string) => Promise<void>>(async () => {})
+  /** 仅用于清空搜索框时判断是否回到列表；不放入 debounce 的依赖，避免 searchMode 从 false→true 时多打一次 /api/search */
+  const searchModeRef = useRef(false)
+  useEffect(() => {
+    searchModeRef.current = searchMode
+  }, [searchMode])
 
   const loadServerVector = useCallback(async () => {
     setArkStatus('')
@@ -131,10 +151,12 @@ export function App() {
         setLoading(false)
         const d = (await res.json().catch(() => ({}))) as { message?: string }
         setItems([])
+        const msg = d.message || `HTTP ${res.status}，请在「设置」中填写与服务器一致的 API Key`
         setError({
           title: '无法加载',
-          detail: d.message || `HTTP ${res.status}，请在「设置」中填写与服务器一致的 API Key`,
+          detail: msg,
           showConfigHint: true,
+          hintKind: configHintFromDetail(msg, 'api_key'),
         })
         return
       }
@@ -202,10 +224,12 @@ export function App() {
       }
       if (!ok) {
         setLoading(false)
+        const searchDetail = data?.message || data?.error || `HTTP ${res.status}`
         setError({
           title: '搜索不可用',
-          detail: data?.message || data?.error || `HTTP ${res.status}`,
+          detail: searchDetail,
           showConfigHint: true,
+          hintKind: configHintFromDetail(searchDetail, 'vector'),
         })
         return
       }
@@ -228,21 +252,35 @@ export function App() {
   }, [searchMemes])
 
   useEffect(() => {
-    void apiFetch(withApiPath('/api/auth/config'), { credentials: 'include' })
-      .then((r) => r.json())
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
     let cancel = false
     void (async () => {
       try {
+        const cfgRes = await apiFetch(withApiPath('/api/auth/config'), { credentials: 'include' })
+        const cfg = (await cfgRes.json().catch(() => ({}))) as { requireApiKey?: boolean }
+        if (cancel) return
+        if (cfg.requireApiKey && !getStoredApiKey().trim()) {
+          setLoading(false)
+          setError({
+            title: '需要访问用 API Key',
+            detail:
+              '服务器已启用 API 鉴权。请打开右上角「设置」，在「API Key」中填写与服务器（如环境变量 MEME_API_KEY 或库内配置）一致的 Key。这与火山 Ark、向量检索是不同配置。',
+            showConfigHint: true,
+            hintKind: 'api_key',
+          })
+          return
+        }
         await loadCategories()
         if (!cancel) await loadMemes(1, '')
       } catch (e) {
         if (!cancel) {
           setLoading(false)
-          setError({ title: '无法加载', detail: e instanceof Error ? e.message : String(e), showConfigHint: true })
+          const msg = e instanceof Error ? e.message : String(e)
+          setError({
+            title: '无法加载',
+            detail: msg,
+            showConfigHint: true,
+            hintKind: configHintFromDetail(msg, 'api_key'),
+          })
         }
       }
     })()
@@ -255,7 +293,7 @@ export function App() {
   useEffect(() => {
     const q = searchInput.trim()
     if (!q) {
-      if (searchMode) {
+      if (searchModeRef.current) {
         setSearchMode(false)
         setSearchBanner(null)
         void loadMemesRef.current(1)
@@ -266,7 +304,7 @@ export function App() {
       void searchMemesRef.current(q)
     }, 400)
     return () => clearTimeout(t)
-  }, [searchInput, searchMode])
+  }, [searchInput])
 
   const pickCategory = (name: string) => {
     setCurrentCat(name)
@@ -286,10 +324,12 @@ export function App() {
         setLoading(false)
         const d = (await res.json().catch(() => ({}))) as { message?: string }
         setItems([])
+        const pmsg = d.message || `HTTP ${res.status}`
         setError({
           title: '无法加载',
-          detail: d.message || `HTTP ${res.status}`,
+          detail: pmsg,
           showConfigHint: true,
+          hintKind: configHintFromDetail(pmsg, 'api_key'),
         })
         return
       }
@@ -607,7 +647,22 @@ export function App() {
                 <h2>{error.title}</h2>
                 <p>{error.detail}</p>
                 {error.showConfigHint && (
-                  <p class="hint">可在「设置」中保存 Ark 与 API Key。未配置向量时会用全文。</p>
+                  <>
+                    <p class="hint">
+                      {error.hintKind === 'api_key' &&
+                        '在「设置」中填写与服务器一致的访问用 API Key（本地「API Key」字段，请求头 X-API-Key）。与火山 Ark、向量检索无关。'}
+                      {error.hintKind === 'login' && '若站点启用了密码保护，请先完成登录再浏览。'}
+                      {(error.hintKind === 'vector' || !error.hintKind) &&
+                        '可在「设置」中配置火山 Ark 以启用向量语义搜索；未配置时搜索会回退为全文（PGroonga）。'}
+                    </p>
+                    {(error.hintKind === 'api_key' || error.hintKind === 'login') && (
+                      <p>
+                        <button type="button" class="header__btn" onClick={openSettings}>
+                          打开设置
+                        </button>
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )}
