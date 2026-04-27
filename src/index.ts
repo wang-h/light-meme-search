@@ -36,6 +36,8 @@ app.use('*', async (c, next) => {
       if (sent !== apiKey) {
         return c.json({ error: 'unauthorized', message: '缺少或错误的 X-API-Key' }, 401)
       }
+      // 与浏览器会话无关：带正确 Key 的 /api 调用应放行，避免「站点密码 + API Key」时仍要求 Cookie。
+      return next()
     }
     const sitePw = getSitePasswordAfterLoad()
     if (sitePw) {
