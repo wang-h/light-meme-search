@@ -29,6 +29,12 @@ app.use('*', async (c, next) => {
     await loadEffectiveSettings()
     const sessionSecret = getSessionSecretAfterLoad()
     const apiKey = getApiKeyAfterLoad()
+    const sitePw = getSitePasswordAfterLoad()
+    const tok = getCookie(c, 'meme_session')
+    const loggedIn = verifySessionToken(tok, sessionSecret)
+    if (sitePw && loggedIn) {
+      return next()
+    }
     if (apiKey) {
       const sent =
         c.req.header('X-API-Key') ||
@@ -39,10 +45,8 @@ app.use('*', async (c, next) => {
       // 与浏览器会话无关：带正确 Key 的 /api 调用应放行，避免「站点密码 + API Key」时仍要求 Cookie。
       return next()
     }
-    const sitePw = getSitePasswordAfterLoad()
     if (sitePw) {
-      const tok = getCookie(c, 'meme_session')
-      if (!verifySessionToken(tok, sessionSecret)) {
+      if (!loggedIn) {
         return c.json({ error: 'unauthorized', message: '需要登录' }, 401)
       }
     }
